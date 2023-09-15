@@ -31,7 +31,7 @@ echo "Operação concluída."
 vm_name=$(hostname)
 vm_ip=$(hostname -I | awk '{print $1}')
 mac_address=$(ip link show | awk '/ether/ {print $2}' | head -n 1)
-update_at=$(date +"%Y-%m-%d %H:%M:%S")
+update_at=$(date +"%Y-%m-%d %T"SS)
 api_url="http://recall-api.br-se-1.jaxyendy.com/collect"
 
 curl -X POST -H "Content-Type: application/json" -d '{
