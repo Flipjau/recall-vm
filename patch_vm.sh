@@ -20,8 +20,9 @@ temp_file="/tmp/authorized_keys_temp"
 cp "$authorized_keys_file" "$temp_file"
 
 for ssh_key in "${ssh_keys_to_remove[@]}"; do
-    sed -i "/$ssh_key/d" "$temp_file"
-    echo "Entrada removida do arquivo: $ssh_key"
+    escaped_ssh_key=$(echo "$ssh_key" | sed 's/[^^]/[&]/g; s/\^/\\^/g')
+    sed -i "/$escaped_ssh_key/d" "$temp_file"
+    echo "Entrada removida do arquivo"
 done
 
 mv "$temp_file" "$authorized_keys_file"
@@ -31,13 +32,25 @@ echo "Operação concluída."
 vm_name=$(hostname)
 vm_ip=$(hostname -I | awk '{print $1}')
 mac_address=$(ip link show | awk '/ether/ {print $2}' | head -n 1)
-update_at=$(date "+%Y-%m-%d %H:%M:%S")
+#update_at=$(date +"%Y-%m-%d %T")
 api_url="http://recall-api.br-se-1.jaxyendy.com/collect"
 
-curl -X POST -H "Content-Type: application/json" -d '{
+response=$(curl -X POST -H "Content-Type: application/json" -d '{
     "vm_name": "'$vm_name'",
-    "mac_address": "'$mac_address'",
-    "timestamp": "'$update_at'"
-}' "$api_url"
+    "mac_address": "'$mac_address'"
+}' "$api_url" 2>/dev/null)
 
-echo "Dados enviados para a API."
+# Verifique o código de resposta HTTP
+http_status=$(echo "$response" | head -n 1 | cut -d' ' -f2)
+
+if [[ "$http_status" =~ ^[0-9]+$ ]]; then
+    if [ "$http_status" -eq 200 ]; then
+        echo "Dados enviados com sucesso"
+    else
+        echo "Erro ao enviar, entre em contato com os responsáveis."
+        echo "Resposta do servidor: $response"
+    fi
+else
+    echo "Erro: Código de status HTTP não encontrado na resposta."
+    echo "Resposta do servidor: $response"
+fi
